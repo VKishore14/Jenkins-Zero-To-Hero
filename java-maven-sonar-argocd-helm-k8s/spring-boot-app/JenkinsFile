@@ -2,28 +2,30 @@ pipeline {
   agent {
     docker {
       image 'abhishekf5/maven-abhishek-docker-agent:v1'
-      args '--user root -v /var/run/docker.sock:/var/run/docker.sock' // mount Docker socket to access the host's Docker daemon
+      args '--user root -v /var/run/docker.sock:/var/run/docker.sock' // Mount Docker socket to access the host's Docker daemon
     }
   }
+
   environment {
     DOCKER_IMAGE = "vkishore14/ultimate-cicd:${BUILD_NUMBER}"
     GIT_REPO_NAME = "Jenkins-Zero-To-Hero"
     GIT_USER_NAME = "VKishore14"
     SONAR_URL = "http://20.83.45.57:9000"
   }
+
   stages {
     stage('Checkout') {
       steps {
-        sh 'echo passed'
-        // Uncomment this line to enable checkout
-        // git branch: 'main', url: 'https://github.com/VKishore14/Jenkins-Zero-To-Hero.git'
+        // Uncomment this to enable Git checkout
+        git branch: 'main', url: 'https://github.com/VKishore14/Jenkins-Zero-To-Hero.git'
       }
     }
     
     stage('Build and Test') {
       steps {
+        // Show files for debugging
         sh 'ls -ltr'
-        // build the project and create a JAR file
+        // Build the project and create a JAR file
         sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn clean package'
       }
     }
@@ -39,7 +41,6 @@ pipeline {
     stage('Build and Push Docker Image') {
       steps {
         script {
-          // Debugging output to check the image name
           echo "Building Docker image: ${DOCKER_IMAGE}"
           
           // Build the Docker image
@@ -51,7 +52,7 @@ pipeline {
           def dockerImage = docker.image("${DOCKER_IMAGE}")
 
           // Authenticate with Docker registry and push the image
-          withCredentials([usernamePassword(credentialsId: 'vkishore14', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+          withCredentials([usernamePassword(credentialsId: 'docker-credentials-id', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
             docker.withRegistry('https://index.docker.io/v1/', "${DOCKER_USERNAME}:${DOCKER_PASSWORD}") {
               echo "Pushing Docker image: ${DOCKER_IMAGE}"
               dockerImage.push()  // Push the image to Docker Hub
@@ -65,15 +66,15 @@ pipeline {
       steps {
         withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
           script {
-            // Ensure that the GitHub token is correctly used for pushing changes
+            // Update deployment file in the GitHub repository
             echo "Updating deployment file in GitHub repository"
-
-            // Set up Git config
+            
+            // Set up Git config and replace the image tag with the BUILD_NUMBER
             sh '''
                 git config user.email "venkata.enaganuri@gmail.com"
                 git config user.name "Venkata Kishore"
                 
-                # Update the deployment file by replacing 'replaceImageTag' with the BUILD_NUMBER
+                # Replace placeholder in the deployment file with the build number
                 sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
 
                 # Stage, commit, and push the updated deployment file
@@ -87,3 +88,4 @@ pipeline {
     }
   }
 }
+
