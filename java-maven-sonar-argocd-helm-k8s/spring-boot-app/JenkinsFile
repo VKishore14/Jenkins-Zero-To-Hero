@@ -16,14 +16,12 @@ pipeline {
   stages {
     stage('Checkout') {
       steps {
-        // Uncomment this to enable Git checkout
         git branch: 'main', url: 'https://github.com/VKishore14/Jenkins-Zero-To-Hero.git'
       }
     }
-    
+
     stage('Build and Test') {
       steps {
-        // Show files for debugging
         sh 'ls -ltr'
         // Build the project and create a JAR file
         sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn clean package'
@@ -42,7 +40,7 @@ pipeline {
       steps {
         script {
           echo "Building Docker image: ${DOCKER_IMAGE}"
-          
+
           // Build the Docker image
           sh """
               cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
@@ -88,4 +86,3 @@ pipeline {
     }
   }
 }
-
